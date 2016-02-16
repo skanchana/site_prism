@@ -124,11 +124,36 @@ module SitePrism
       create_helper_method method_name, *find_args do
         define_method method_name do |timeout = nil, *runtime_args|
           timeout = timeout.nil? ? Waiter.default_wait_time : timeout
+          element_available = false
           Capybara.using_wait_time timeout do
-            element_exists?(*find_args, *runtime_args)
+            start_time = Time.now
+            sleep 0.05
+            until element_available
+              element_available = element_exists?(*find_args, *runtime_args)
+              break unless Time.now - start_time <= timeout
+            end
           end
+          return element_available
         end
       end
+
+      method_name = "wait_for_no_#{element_name}"
+      create_helper_method method_name, *find_args do
+        define_method method_name do |timeout = nil, *runtime_args|
+          timeout = timeout.nil? ? Waiter.default_wait_time : timeout
+          no_element = false
+          Capybara.using_wait_time timeout do
+            start_time = Time.now
+            sleep 0.05
+            until no_element
+              no_element = element_does_not_exist?(*find_args, *runtime_args)
+              break unless Time.now - start_time <= timeout
+            end
+          end
+          return no_element
+        end
+      end
+
     end
 
     def create_visibility_waiter(element_name, *find_args)
